@@ -1,0 +1,69 @@
+package PackageDemo;
+
+import java.io.IOException;
+import java.util.HashSet;
+
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.util.*;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.lib.input.*;
+import org.apache.hadoop.mapreduce.lib.output.*;
+
+public class MusicDS {
+	public static void main(String args[]) throws Exception{
+		Configuration c=new Configuration();
+		String[] fields=new GenericOptionsParser(c,args).getRemainingArgs();
+		Path input=new Path(fields[0]);
+		Path output=new Path(fields[1]);
+		Job j=new Job(c,"musicDs");
+		j.setJarByClass(MusicDS.class);
+		j.setMapperClass(MapForMusicDS.class);
+		j.setReducerClass(ReduceForMusicDS.class);
+		j.setMapOutputKeyClass(Text.class);
+		j.setMapOutputValueClass(Text.class);
+		j.setOutputKeyClass(Text.class);
+		j.setOutputValueClass(Text.class);
+		FileInputFormat.addInputPath(j, input);
+		FileOutputFormat.setOutputPath(j, output);
+		System.exit(j.waitForCompletion(true)?0:1);
+	}
+	
+	public static class MapForMusicDS extends Mapper<LongWritable,Text,Text,Text>{
+		public void map(LongWritable key,Text value,Context con) throws IOException, InterruptedException{
+			try{
+				String[] part=value.toString().split(",");
+				if(part.length==5){
+					if(part[0].equals("UserId")) return;
+					String user=part[0];
+					String track=part[1];
+					String shared=part[2];
+					con.write(new Text(track),new Text("User1_"+user));
+					if(shared.equals("1")){
+						con.write(new Text(track), new Text("Shared1"));
+					}
+				}
+			}
+			catch(Exception e){
+				
+			}
+		}
+	}
+	
+	public static class ReduceForMusicDS extends Reducer<Text,Text,Text,Text>{
+		public void reduce(Text key,Iterable<Text> values,Context con) throws IOException, InterruptedException{
+			HashSet<String> uniqueUsers=new HashSet<>();
+			int shareCnt=0;
+			for(Text value:values){
+				if(value.toString().startsWith("User1_")){
+					uniqueUsers.add(value.toString());
+				}
+				else if(value.toString().equals("Shared1")){
+					shareCnt++;
+				}
+			}
+			con.write(key, new Text("Listeners: "+uniqueUsers.size()+", Shared Count: "+shareCnt));
+		}
+	}
+}

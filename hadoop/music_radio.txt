@@ -1,0 +1,60 @@
+package PackageDemo;
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.util.*;
+import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.lib.input.*;
+import org.apache.hadoop.mapreduce.lib.output.*;
+
+public class RadioDS {
+	public static void main(String[] args) throws Exception{
+		Configuration c=new Configuration();
+		String[] files=new GenericOptionsParser(c,args).getRemainingArgs();
+		Job j=new Job(c,"radiods");
+		FileInputFormat.addInputPath(j,new Path(files[0]));
+		FileOutputFormat.setOutputPath(j,new Path(files[1]));
+		j.setJarByClass(RadioDS.class);
+		j.setMapperClass(MapForRadioDS.class);
+		j.setReducerClass(ReduceForRadioDS.class);
+		j.setOutputKeyClass(Text.class);
+		j.setOutputValueClass(Text.class);
+		j.setMapOutputKeyClass(Text.class);
+		j.setMapOutputValueClass(Text.class);
+		System.exit(j.waitForCompletion(true)?0:1);
+	}
+	
+	public static class MapForRadioDS extends Mapper<LongWritable,Text,Text,Text>{
+		public void map(LongWritable key,Text value,Context con){
+			try{
+				String[] part=value.toString().split(",");
+				if(part[0].equals("UserId")) return;
+				if(part.length==5){
+					String user=part[0];
+					String track=part[1];
+					String radio=part[3];
+					String skipped=part[4];
+					con.write(new Text(track), new Text("Radio"+radio));
+					con.write(new Text(track), new Text("Skipped"+skipped));
+				}
+			}
+			catch(Exception e){
+				
+			}
+		}
+	}
+	
+	public static class ReduceForRadioDS extends Reducer<Text,Text,Text,Text>{
+		public void reduce(Text key,Iterable<Text> values,Context con) throws IOException, InterruptedException{
+			int playedCnt=0,skippedCnt=0;
+			for(Text value:values){
+				if(value.toString().equals("Radio1")) playedCnt++;
+				if(value.toString().equals("Skipped1")) skippedCnt++;
+			}
+			con.write(key, new Text("Played on Radio: "+playedCnt+" Skipped: "+skippedCnt));
+		}
+	}
+}

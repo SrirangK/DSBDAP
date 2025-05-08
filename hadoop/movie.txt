@@ -1,0 +1,60 @@
+package PackageDemo;
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.util.*;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.lib.input.*;
+import org.apache.hadoop.mapreduce.lib.output.*;
+
+public class MovieReviews {
+	public static void main(String[] args) throws Exception{
+		Configuration c=new Configuration();
+		String[] paths=new GenericOptionsParser(c,args).getRemainingArgs();
+		Job j=new Job(c,"movieReviews");
+		j.setJarByClass(MovieReviews.class);
+		j.setMapperClass(MapForMovieReviews.class);
+		j.setReducerClass(ReduceForMovieReviews.class);
+		j.setOutputKeyClass(Text.class);
+		j.setOutputValueClass(Text.class);
+		j.setMapOutputKeyClass(Text.class);
+		j.setMapOutputValueClass(Text.class);
+		FileInputFormat.addInputPath(j, new Path(paths[0]));
+		FileOutputFormat.setOutputPath(j, new Path(paths[1]));
+		System.exit(j.waitForCompletion(true)?0:1);
+	}
+	
+	public static class MapForMovieReviews extends Mapper<LongWritable,Text,Text,Text>{
+		public void map(LongWritable key,Text value,Context con){
+			try{
+				String[] part=value.toString().split(",");
+				if(part[0].equals("userId")) return;
+				if(part.length==4){
+					String movieId=part[1];
+					String rating=part[2];
+					con.write(new Text(movieId), new Text(rating));
+				}
+			}
+			catch(Exception e){
+				
+			}
+		}
+	}
+	
+	public static class ReduceForMovieReviews extends Reducer<Text,Text,Text,Text>{
+		public void reduce(Text key,Iterable<Text> values,Context con) throws IOException, InterruptedException{
+			int cnt=0;
+			Double totalReviews=0.0;
+			for(Text value:values){
+				Double currReview=Double.parseDouble(value.toString());
+				totalReviews+=currReview;
+				cnt++;
+			}
+			Double avgReview=(totalReviews/((double)cnt));
+			con.write(key, new Text("Averege Rating: "+avgReview.toString()));
+		}
+	}
+}

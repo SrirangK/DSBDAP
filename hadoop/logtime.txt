@@ -1,0 +1,60 @@
+package PackageDemo;
+
+import java.io.IOException;
+import java.util.Date;
+import java.text.SimpleDateFormat;
+
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.util.*;
+import org.apache.hadoop.mapreduce.lib.input.*;
+import org.apache.hadoop.mapreduce.lib.output.*;
+
+public class LogFile {
+	public static void main(String args[]) throws Exception{
+		Configuration c=new Configuration();
+		Path input=new Path(args[0]);
+		Path output=new Path(args[1]);
+		Job j=new Job(c,"logfile");
+		j.setJarByClass(LogFile.class);
+		j.setMapperClass(MapForLogFile.class);
+		j.setReducerClass(ReduceForLogFile.class);
+		FileInputFormat.addInputPath(j, input);
+		FileOutputFormat.setOutputPath(j, output);
+		j.setOutputKeyClass(Text.class);
+		j.setOutputValueClass(IntWritable.class);
+		System.exit(j.waitForCompletion(true)?0:1);
+	}
+	
+	public static class MapForLogFile extends Mapper<LongWritable,Text,Text,IntWritable>{
+		public SimpleDateFormat format=new SimpleDateFormat("M/d/yyyy H:mm");
+		
+		public void map(LongWritable key,Text value,Context con){
+			String[] fields=value.toString().split(",");
+			try{
+				if(fields.length==8){
+					String user=fields[1];
+					Date logIn=format.parse(fields[5]);
+					Date logOut=format.parse(fields[7]);
+					long loginTime=(logOut.getTime()-logIn.getTime())/(60*1000);
+					if(loginTime>=0) con.write(new Text(user), new IntWritable((int)loginTime));
+				}
+			}
+			catch (Exception e){
+				
+			}
+		}
+	}
+	
+	public static class ReduceForLogFile extends Reducer<Text,IntWritable,Text,IntWritable>{
+		public void reduce(Text key,Iterable<IntWritable> values,Context con) throws IOException, InterruptedException{
+			int totalTime=0;
+			for(IntWritable value:values){
+				totalTime+=value.get();
+			}
+			con.write(key, new IntWritable(totalTime));
+		}
+	}
+}
