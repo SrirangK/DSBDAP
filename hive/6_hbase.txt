@@ -1,0 +1,32 @@
+create 'FlightInfo', 'info', 'schedule', 'delay'
+
+put 'FlightInfo', 'FL001', 'info:flightNumber', 'FL001'
+put 'FlightInfo', 'FL001', 'info:airline', 'AirIndia'
+put 'FlightInfo', 'FL001', 'schedule:departure', '08:00'
+put 'FlightInfo', 'FL001', 'schedule:arrival', '10:30'
+put 'FlightInfo', 'FL001', 'delay:departureDelay', '15'
+
+create 'FlightData', 'details'
+alter 'FlightData', NAME => 'timing'
+disable 'FlightData'
+drop 'FlightData'
+
+CREATE EXTERNAL TABLE hive_flight_info(
+    rowkey STRING,
+    flightNumber STRING,
+    airline STRING,
+    departure STRING,
+    arrival STRING,
+    departureDelay INT
+)
+STORED BY 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
+WITH SERDEPROPERTIES (
+  "hbase.columns.mapping" = ":key,info:flightNumber,info:airline,schedule:departure,schedule:arrival,delay:departureDelay"
+)
+TBLPROPERTIES("hbase.table.name" = "FlightInfo");
+
+SELECT SUM(departureDelay) AS total_departure_delay FROM hive_flight_info;
+SELECT AVG(departureDelay) AS avg_departure_delay FROM hive_flight_info;
+
+CREATE INDEX flight_delay_index ON TABLE hive_flight_info (departureDelay)
+AS 'COMPACT' WITH DEFERRED REBUILD;

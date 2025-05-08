@@ -1,0 +1,46 @@
+CREATE TABLE online_retail (
+  invoice_no STRING,
+  stock_code STRING,
+  description STRING,
+  quantity INT,
+  invoice_date STRING,
+  unit_price FLOAT,
+  customer_id STRING,
+  country STRING
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE;
+
+
+LOAD DATA LOCAL INPATH '/home/hadoop/online_retail.csv' INTO TABLE online_retail;
+
+CREATE INDEX idx_customer ON TABLE online_retail (customer_id)
+AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler'
+WITH DEFERRED REBUILD;
+ALTER INDEX idx_customer ON online_retail REBUILD;
+
+
+SELECT 
+  SUM(quantity * unit_price) AS total_sales,
+  AVG(quantity * unit_price) AS average_sales
+FROM online_retail;
+
+
+SELECT 
+  invoice_no,
+  SUM(quantity * unit_price) AS order_total
+FROM online_retail
+GROUP BY invoice_no
+ORDER BY order_total DESC
+LIMIT 1;
+
+
+SELECT 
+  customer_id,
+  SUM(quantity * unit_price) AS customer_total
+FROM online_retail
+WHERE customer_id IS NOT NULL
+GROUP BY customer_id
+ORDER BY customer_total DESC
+LIMIT 1;
