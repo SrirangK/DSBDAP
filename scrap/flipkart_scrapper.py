@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 
 
 with open("Flipkart.html", "r", encoding="utf-8") as file:
-    soup = BeautifulSoup(file, "lxml")
+    soup = BeautifulSoup(file, "lxml")  
 
 reviews = soup.find_all("div", class_="EKFha-")
 

@@ -7,7 +7,7 @@ reviews = soup.find_all("article",class_="sc-571af6d2-1 hzjHJm user-review-item"
 
 with open("imdb_review.txt","w",encoding="utf8") as f:
     for review in reviews:
-        name = review.select_one("li.ipc-inline-list__item")
+        name = review.select_one("a.ipc-link.ipc-link--base")
         rating = review.select_one("span.ipc-rating-star--rating")
         comment = review.select_one(".ipc-title__text")
 

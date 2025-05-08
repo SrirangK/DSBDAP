@@ -1,13 +1,10 @@
 from bs4 import BeautifulSoup
 
-# Load HTML
 with open("Myntra.html", "r", encoding="utf-8") as file:
     soup = BeautifulSoup(file, "lxml")
 
-# Extract reviews
 reviews = soup.find_all("div", class_="user-review-userReviewWrapper")
 
-# Write to file
 with open("myntra_reviews.txt", "w", encoding="utf-8") as f:
     for review in reviews:
         name = review.select_one(".user-review-left span")
