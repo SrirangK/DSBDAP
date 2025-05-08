@@ -1,13 +1,11 @@
 from bs4 import BeautifulSoup
 
-# Load HTML
+
 with open("Flipkart.html", "r", encoding="utf-8") as file:
     soup = BeautifulSoup(file, "lxml")
 
-# Extract reviews
 reviews = soup.find_all("div", class_="EKFha-")
 
-# Write to file
 with open("flipkart_reviews.txt", "w", encoding="utf-8") as f:
     for review in reviews:
         name = review.select_one("p._2NsDsF.AwS1CA")
